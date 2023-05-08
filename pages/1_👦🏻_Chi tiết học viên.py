@@ -124,61 +124,82 @@ if authentication_status:
     col1.markdown(f"MSNV: {df1.iloc[0,1]}")
     col2.markdown(f"Email: {df1.iloc[0, 11]}")
     col3.markdown(f"Ngày bắt đầu học {df1.iloc[0, 16]}")
-    col4.markdown(f"học tại: {df1.iloc[0, 12]}")
+    col4.markdown(f"Học tại: {df1.iloc[0, 12]}")
     df1 = df1.drop(['STT'], axis=1)
+    # Third row
+    col1, col2, col3, col4 = st.columns(4)
+    col1.markdown(f"Lớp đang học: {df1.iloc[0, 18]}")
+    col2.markdown(f"Lớp TKB: {df1.iloc[0, 20]}")
+    col3.markdown(f"Lớp ca học: {df1.iloc[0, 21]}")
+    col4.markdown(f"Lớp giáo viên: {df1.iloc[0, 22]}")
 
     df2 = pd.melt(df1[['Họ tên', 'Nghe', 'Đọc', 'Viết', 'Nói', 'Overall']],
                   id_vars='Họ tên', var_name='Skills', value_name='Score')
     fig1 = bar(df2, yvalue='Score',
-               xvalue='Skills', text=df2["Score"], title='Điềm đầu vào', x_title='Kỹ năng', y_title='Điểm',)
+               xvalue='Skills', text=df2["Score"], title='', x_title='Kỹ năng', y_title='Điểm',)
     fig1.update_traces(
         hovertemplate="Score: %{y:,.0f}<extra></extra>", hoverlabel=dict(font=dict(size=20)))
     fig1.update_layout(font=dict(size=25))
     fig1.update_xaxes(tickfont=dict(size=17))
-    st.plotly_chart(fig1, use_container_width=True)
 
-    st.markdown("-------------------------------------------------------------------------------------------------------------------------------------------------------")
-    st.subheader('Chuyên cần')
-    df3 = pd.melt(df1[['Họ tên', 'thucbuoi_dk', 'dahoc', 'nghi']],
+    df3 = pd.melt(df1[['Họ tên', 'thực buổi đăng ký', 'đã học', 'nghỉ']],
                   id_vars='Họ tên', var_name='chuyên cần', value_name='số lần')
     fig2 = bar(df3, yvalue='số lần',
-               xvalue='chuyên cần', text=df3["số lần"], title='', x_title='', y_title='Số lần',)
+               xvalue='chuyên cần', text=df3["số lần"], title='', x_title='', y_title='Số buổi',)
     fig2.update_traces(
-        hovertemplate="Số lần: %{y:,.0f}<extra></extra>", hoverlabel=dict(font=dict(size=20)))
+        hovertemplate="Số buổi: %{y:,.0f}<extra></extra>", hoverlabel=dict(font=dict(size=20)))
 
     fig2.update_layout(font=dict(size=25))
     fig2.update_xaxes(tickfont=dict(size=17))
-    st.plotly_chart(fig2, use_container_width=True)
+
     st.markdown("-------------------------------------------------------------------------------------------------------------------------------------------------------")
-    st.subheader('Làm bài tập')
-    df4 = pd.melt(df1[['Họ tên', 'thucbuoi_dk', 'khonglam', 'lamthieu']],
+    df4 = pd.melt(df1[['Họ tên', 'thực buổi đăng ký', 'không làm', 'làm thiếu']],
                   id_vars='Họ tên', var_name='chuyên cần', value_name='số lần')
     fig3 = bar(df4, yvalue='số lần',
-               xvalue='chuyên cần', text=df3["số lần"], title='', x_title='', y_title='Số lần',)
+               xvalue='chuyên cần', text=df4["số lần"], title='', x_title='', y_title='Số buổi',)
     fig3.update_traces(
-        hovertemplate="Số lần: %{y:,.0f}<extra></extra>", hoverlabel=dict(font=dict(size=20)))
+        hovertemplate="Số buổi: %{y:,.0f}<extra></extra>", hoverlabel=dict(font=dict(size=20)))
 
     fig3.update_layout(font=dict(size=25))
     fig3.update_xaxes(tickfont=dict(size=17))
-    st.plotly_chart(fig3, use_container_width=True)
+    # Create 2 columns
+    col1, col2 = st.columns(2)
+    col1.subheader('Chuyên cần')
+    col1.plotly_chart(fig2, use_container_width=True)
+    col2.subheader('Làm bài tập')
+    col2.plotly_chart(fig3, use_container_width=True)
 
-    # st.markdown("-------------------------------------------------------------------------------------------------------------------------------------------------------")
-    # st.subheader('Chi tiết')
-    # # Subset
-    # df2 = df1.loc[:, 'lop_id':'giaovien']
-    # df2.columns = ['lớp id', 'PĐK', 'lớp tên',
-    #                'lớp thời gian học', 'lớp ca học', 'giáo viên']
-    # df1
-    # import io
-    # buffer = io.BytesIO()
-    # with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
-    #     # Write each dataframe to a different worksheet.
-    #     df5.to_excel(writer, sheet_name='Sheet1')
-    #     # Close the Pandas Excel writer and output the Excel file to the buffer
-    #     writer.save()
-    #     st.download_button(
-    #         label="Download chi tiết giảm giá worksheets",
-    #         data=buffer,
-    #         file_name="giamgia_details.xlsx",
-    #         mime="application/vnd.ms-excel"
-    #     )
+    st.markdown("-------------------------------------------------------------------------------------------------------------------------------------------------------")
+    st.subheader('Điềm đầu vào')
+    st.plotly_chart(fig1, use_container_width=True)
+
+    st.markdown("-------------------------------------------------------------------------------------------------------------------------------------------------------")
+    diemthi = collect_data('https://vietop.tech/api/get_data/diemthi')
+    st.subheader('Chi tiết')
+    df_diemthi = diemthi[['hv_id', 'lop_id', 'created_at', 'diemcandat', 'overall', 'reading',
+                          'listening', 'writing', 'speaking', 'result', 'dahoc', 'type', 'location', 'note_gv']].query("diemcandat.notnull()")
+    # Mapping
+    Subjects = {1: "TĐK - Foundation 1", 2: "Thi thật", 3: "Test lại sau bảo lưu", 4: "TĐK - Foundation 2",
+                5: "TĐK - 3.5", 6: "TĐK - 4.0", 7:  "TĐK - 4.5", 8: "TĐLK - 5.0", 9: "TĐK - 5.5", 10: "TĐk - 6.0",
+                11: "TĐK - 6.0+", 12: "TĐK - 6.5", 13: "Thi cuối khoá"}
+    # Add new columns
+    df_diemthi.loc[:, ("type")] = df_diemthi.loc[:, ("type")].map(Subjects)
+    df_diemthi.location = df_diemthi.location.map(
+        {1: "Vietop", 2: 'IDP', 3: "BC"})
+    # Merge
+    df_diemthi = df_diemthi.merge(df[['hv_id', 'Họ tên']], on='hv_id').query(
+        "`Họ tên` == @name_filter")
+    st.dataframe(df_diemthi)
+    import io
+    buffer = io.BytesIO()
+    with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
+        # Write each dataframe to a different worksheet.
+        df_diemthi.to_excel(writer, sheet_name='Sheet1')
+        # Close the Pandas Excel writer and output the Excel file to the buffer
+        writer.save()
+        st.download_button(
+            label="Download chi tiết test định kỳ học viên",
+            data=buffer,
+            file_name="tdk_details.xlsx",
+            mime="application/vnd.ms-excel"
+        )

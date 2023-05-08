@@ -185,16 +185,16 @@ if authentication_status:
     ""
     ""
     st.dataframe(df6)
-    # import io
-    # buffer = io.BytesIO()
-    # with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
-    #     # Write each dataframe to a different worksheet.
-    #     df5.to_excel(writer, sheet_name='Sheet1')
-    #     # Close the Pandas Excel writer and output the Excel file to the buffer
-    #     writer.save()
-    #     st.download_button(
-    #         label="Download chi tiết giảm giá worksheets",
-    #         data=buffer,
-    #         file_name="giamgia_details.xlsx",
-    #         mime="application/vnd.ms-excel"
-    #     )
+    import io
+    buffer = io.BytesIO()
+    with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
+        # Write each dataframe to a different worksheet.
+        df6.to_excel(writer, sheet_name='Sheet1')
+        # Close the Pandas Excel writer and output the Excel file to the buffer
+        writer.save()
+        st.download_button(
+            label="Download chi tiết",
+            data=buffer,
+            file_name="compare_details.xlsx",
+            mime="application/vnd.ms-excel"
+        )
