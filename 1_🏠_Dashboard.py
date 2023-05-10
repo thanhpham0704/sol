@@ -104,6 +104,8 @@ if authentication_status:
     hocvien = collect_data('https://vietop.tech/api/get_data/hocvien')
     molop = collect_data('https://vietop.tech/api/get_data/molop')
     diemthi = collect_data('https://vietop.tech/api/get_data/diemthi')
+    diemdanh_details = collect_data(
+        'https://vietop.tech/api/get_data/diemdanh_details')
     diemthi['created_at'] = diemthi['created_at'].astype('datetime64[ns]')
     diemthi['created_at'] = diemthi['created_at'].dt.date
     # diemthi = diemthi.query(
@@ -171,7 +173,6 @@ if authentication_status:
         submit_button = st.form_submit_button(
             label='Filter',  use_container_width=True)
     df5 = df5[df5['check'].isin(check_filter)]
-
     df5.drop(['date_x', 'date_y', 'location_x',
              'location_y', 'lop_id_x', 'lop_id_y'], axis=1, inplace=True)
     df5.set_index('hv_id', inplace=True)
