@@ -174,23 +174,24 @@ if authentication_status:
     st.plotly_chart(fig1, use_container_width=True)
 
     # st.markdown("-------------------------------------------------------------------------------------------------------------------------------------------------------")
-    diemthi = collect_data('https://vietop.tech/api/get_data/diemthi')
+    # diemthi = collect_data('https://vietop.tech/api/get_data/diemthi')
 
-    st.subheader('Chi tiết test định kỳ')
-    df_diemthi = diemthi[['hv_id', 'lop_id', 'created_at', 'diemcandat', 'overall', 'reading',
-                          'listening', 'writing', 'speaking', 'result', 'dahoc', 'type', 'location', 'note_gv']].query("diemcandat.notnull()")
-    # Mapping
-    Subjects = {1: "TĐK - Foundation 1", 2: "Thi thật", 3: "Test lại sau bảo lưu", 4: "TĐK - Foundation 2",
-                5: "TĐK - 3.5", 6: "TĐK - 4.0", 7:  "TĐK - 4.5", 8: "TĐLK - 5.0", 9: "TĐK - 5.5", 10: "TĐk - 6.0",
-                11: "TĐK - 6.0+", 12: "TĐK - 6.5", 13: "Thi cuối khoá"}
-    # Add new columns
-    df_diemthi.loc[:, ("type")] = df_diemthi.loc[:, ("type")].map(Subjects)
-    df_diemthi.location = df_diemthi.location.map(
-        {1: "Vietop", 2: 'IDP', 3: "BC"})
-    # Merge
-    df_diemthi = df_diemthi.merge(df[['hv_id', 'Họ tên']], on='hv_id').query(
-        "`Họ tên` == @name_filter")
-    st.dataframe(df_diemthi)
+    # st.subheader('Chi tiết test định kỳ')
+    # df_diemthi = diemthi[['hv_id', 'lop_id', 'created_at', 'diemcandat', 'overall', 'reading',
+    #                       'listening', 'writing', 'speaking', 'result', 'dahoc', 'type', 'location', 'note_gv']].query("diemcandat.notnull()")
+    # # Mapping
+    # Subjects = {1: "TĐK - Foundation 1", 2: "Thi thật", 3: "Test lại sau bảo lưu", 4: "TĐK - Foundation 2",
+    #             5: "TĐK - 3.5", 6: "TĐK - 4.0", 7:  "TĐK - 4.5", 8: "TĐLK - 5.0", 9: "TĐK - 5.5", 10: "TĐk - 6.0",
+    #             11: "TĐK - 6.0+", 12: "TĐK - 6.5", 13: "Thi cuối khoá"}
+    # # Add new columns
+    # df_diemthi.loc[:, ("type")] = df_diemthi.loc[:, ("type")].map(Subjects)
+    # df_diemthi.location = df_diemthi.location.map(
+    #     {1: "Vietop", 2: 'IDP', 3: "BC"})
+    # # Merge
+    # df_diemthi = df_diemthi.merge(df[['hv_id', 'Họ tên']], on='hv_id').query(
+    #     "`Họ tên` == @name_filter")
+
+    # st.dataframe(df_diemthi)
     import io
     buffer = io.BytesIO()
     # with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
@@ -204,7 +205,7 @@ if authentication_status:
     #         file_name="tdk_details.xlsx",
     #         mime="application/vnd.ms-excel"
     #     )
-    st.markdown("-------------------------------------------------------------------------------------------------------------------------------------------------------")
+    # st.markdown("-------------------------------------------------------------------------------------------------------------------------------------------------------")
     lophoc = collect_data('https://vietop.tech/api/get_data/lophoc')
     lophoc_schedules = collect_data(
         'https://vietop.tech/api/get_data/lophoc_schedules')
