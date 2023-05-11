@@ -109,12 +109,8 @@ if authentication_status:
     @st.cache_data()
     def chuyencan_converter(df):
         # Mapping diemdanh_details.chuyencan
-        conditions = df.chuyencan == 1, df.chuyencan == 2, df.chuyencan == 3,\
-            df.chuyencan == 4, df.chuyencan == 5, df.chuyencan == 6,\
-            df.chuyencan == 7, df.chuyencan == 9
-        choices = ["Đi học", "Có phép", "Không phép",
-                   "Không học", "Điểm danh LMS", "GV_off",
-                   "Học ngày khác", "Học online"]
+        conditions = df.chuyencan == 1, df.chuyencan == 4, df.chuyencan == 7, df.chuyencan == 0
+        choices = ["Đi học", "Không học", "Nghỉ học", "Thiếu data"]
         df.chuyencan = np.select(conditions, choices)
         return df
     # Read Excel
