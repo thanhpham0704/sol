@@ -105,6 +105,19 @@ if authentication_status:
         )
         fig.update_traces(textposition='auto')
         return fig
+
+    @st.cache_data()
+    def chuyencan_converter(df):
+        # Mapping diemdanh_details.chuyencan
+        conditions = df.chuyencan == 1, df.chuyencan == 2, df.chuyencan == 3,\
+            df.chuyencan == 4, df.chuyencan == 5, df.chuyencan == 6,\
+            df.chuyencan == 7, df.chuyencan == 9
+        choices = ["Đi học", "Có phép", "Không phép",
+                   "Không học", "Điểm danh LMS", "GV_off",
+                   "Học ngày khác", "Học online"]
+        df.chuyencan = np.select(conditions, choices)
+        return df
+    # Read Excel
     df = read_excel_cache('sol_score_update.xlsx')
     # Create a form to filter fullname
     with st.sidebar.form(key='coso_filter_form'):
@@ -229,11 +242,13 @@ if authentication_status:
 
     # merge lophoc and diemdanh
     df3 = df.merge(
-        diemdanh_details[['lop_id', 'giohoc', 'date_created']], on='lop_id')
+        diemdanh_details[['lop_id', 'giohoc', 'chuyencan', 'date_created']], on='lop_id')
     df3 = df3.drop_duplicates().sort_values(
         "date_created", ascending=False)
-    df4 = df3[['fullname', 'lop_id', 'date_created', 'giohoc', 'lop_ten', 'lop_cahoc',
+    df4 = df3[['fullname', 'lop_id', 'date_created', 'giohoc', 'chuyencan', 'lop_ten', 'lop_cahoc',
                'lop_thoigianhoc', 'molop_active']]
+
+    df4 = chuyencan_converter(df4)
     st.subheader("Các lớp đã và đang học")
     # Create a form to filter check
     with st.form(key='check_filter_form'):
@@ -242,8 +257,9 @@ if authentication_status:
         submit_button = st.form_submit_button(
             label='Filter',  use_container_width=True)
     df4 = df4[df4['lop_id'].isin(lop_filter)]
+
     df5 = df4.copy()
-    df4.columns = ['tên giáo viên', 'lớp id', 'ngày học', 'giờ học', 'lớp tên', 'lớp ca học',
+    df4.columns = ['tên giáo viên', 'lớp id', 'ngày học', 'giờ học', 'chuyên cần', 'lớp tên', 'lớp ca học',
                    'lớp thời gian học',  'tình trạng lớp']
     # st.markdown("-------------------------------------------------------------------------------------------------------------------------------------------------------")
     ""

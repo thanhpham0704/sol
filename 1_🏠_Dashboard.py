@@ -16,8 +16,9 @@ layout = "wide"
 st.set_page_config(page_title=page_title, page_icon=page_icon, layout=layout)
 
 # ----------------------------------------
-names = ["Phạm Tấn Thành", "Phạm Minh Tâm", "Vận hành", "Kinh doanh"]
-usernames = ["thanhpham", "tampham", "vietopvanhanh", 'vietopkinhdoanh']
+names = ["Phạm Tấn Thành", "Phạm Minh Tâm", "Vận hành", "Kinh doanh", "SOL"]
+usernames = ["thanhpham", "tampham",
+             "vietopvanhanh", 'vietopkinhdoanh', 'vietop_sol']
 
 # Load hashed password
 file_path = Path(__file__).parent / 'hashed_pw.pkl'
