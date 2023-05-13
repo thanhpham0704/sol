@@ -114,6 +114,7 @@ if authentication_status:
         choices = ["Đi học", "Không học", "Nghỉ học", "Thiếu data"]
         df.chuyencan = np.select(conditions, choices)
         return df
+
     # Read Excel
     df = read_excel_cache('sol_score_update.xlsx')
     # Create a form to filter fullname
@@ -254,11 +255,69 @@ if authentication_status:
         submit_button = st.form_submit_button(
             label='Filter',  use_container_width=True)
     df4 = df4[df4['lop_id'].isin(lop_filter)]
+    # st.markdown("-------------------------------------------------------------------------------------------------------------------------------------------------------")
+    ""
+    diemdanh = collect_data('https://vietop.tech/api/get_data/diemdanh')
+    df_drop = df4.drop_duplicates(subset='lop_id')[['lop_id']]\
+        .merge(diemdanh[['lop_id', 'kynang', 'noidung_note', 'date_created',
+                         'cahoc', 'giaovien',]], on='lop_id')
+    # df_drop = df_drop[df_drop['kynang'].isin([1, 2, 3, 4])]
+    df_drop['kynang_1'] = df_drop['kynang'].map(
+        {1: 'Writing', 2: 'Speaking', 3: 'Reading', 4: 'Listening', })
+    df_drop['kynang_2'] = df_drop['kynang'].map(
+        {1: 'Buổi học', 2: 'Buổi học', 3: 'Buổi học', 4: 'Buổi học', 5: 'Buổi học', 7: 'Buổi học', 6: 'Không học'})
+    df_drop['kynang_3'] = df_drop['kynang'].map(
+        {1: 'Buổi học', 2: 'Buổi học', 3: 'Buổi học', 4: 'Buổi học', 5: 'Lần test', 7: 'Lần test', 6: 'Buổi học'})
 
+    @st.cache_data()
+    def pie_chart(col):
+        df_group = df_drop.groupby(col, as_index=False)[
+            col].value_counts()
+        # Create a pie chart
+        fig = px.pie(df_group, names=df_group[col], values=df_group['count'])
+        fig.update_traces(
+            hovertemplate='%{label}: %{value} (%{percent})', hoverlabel=dict(font=dict(size=15)))
+        fig.update_layout(font=dict(size=20))
+        fig.update_xaxes(tickfont=dict(size=15))
+
+        return fig
+
+    fig5 = pie_chart('kynang_1')
+    fig5.update_layout(
+        title=f"Tỉ trọng kỹ năng của lớp {df4['lop_id'].unique()}")
+
+    fig6 = pie_chart('kynang_2')
+    fig6.update_layout(
+        title=f"Tỉ trọng không học của lớp {df4['lop_id'].unique()}")
+
+    fig7 = pie_chart('kynang_3')
+    fig7.update_layout(
+        title=f"Tỉ trọng tỷ lệ test của lớp {df4['lop_id'].unique()}")
+    ""
+    col1, col2, col3 = st.columns(3)
+
+    col1.plotly_chart(fig5,  use_container_width=True)
+
+    col2.plotly_chart(fig6, use_container_width=True)
+
+    col3.plotly_chart(fig7, use_container_width=True)
+    st.subheader("Qúa trình giảng dạy")
+    df = diemdanh[diemdanh['lop_id'].isin(lop_filter)][[
+        'created_at', 'giaovien', 'cahoc', 'buoihoc', 'kynang', 'module', 'noidung_note']]\
+        .merge(users[['id', 'fullname']], left_on='giaovien', right_on='id')
+    df['kynang'] = df['kynang'].map(
+        {1: 'Writing', 2: 'Speaking', 3: 'Reading', 4: 'Listening', 5: 'Test', 6: 'Không học', 7: 'Test ngày 2'})
+    df.drop(['id', 'giaovien'], axis=1, inplace=True)
+    df['created_at'] = df['created_at'].astype('datetime64[ns]')
+    df['created_at'] = df['created_at'].dt.date
+    df.columns = ['Ngày học',  'Ca dạy',
+                  'Buổi học', 'Kỹ năng', 'Module', 'Giáo viên note', 'Giáo viên',]
+    st.dataframe(df)
+
+    # st.markdown("-------------------------------------------------------------------------------------------------------------------------------------------------------")
     df5 = df4.copy()
     df4.columns = ['tên giáo viên', 'lớp id', 'ngày học', 'giờ học', 'chuyên cần', 'lớp tên', 'lớp ca học',
                    'lớp thời gian học',  'tình trạng lớp']
-    # st.markdown("-------------------------------------------------------------------------------------------------------------------------------------------------------")
     ""
     st.subheader(f"Tổng giờ học theo tháng của :blue[{name_filter}]")
     df5['date_created'] = df5['date_created'].astype('datetime64[ns]')
