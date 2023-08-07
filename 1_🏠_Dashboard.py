@@ -102,7 +102,8 @@ if authentication_status:
         return fig
 
     # Collect data
-    hocvien = collect_data('https://vietop.tech/api/get_data/hocvien')
+    hocvien = collect_data(
+        'https://vietop.tech/api/get_data/hocvien')
     molop = collect_data('https://vietop.tech/api/get_data/molop')
     diemthi = collect_data('https://vietop.tech/api/get_data/diemthi')
     diemdanh_details = collect_data(

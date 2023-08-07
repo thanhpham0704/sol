@@ -70,7 +70,7 @@ if authentication_status:
     #     submit_button = st.form_submit_button(
     #         label='Filter',  use_container_width=True)
 
-    @st.cache_data(ttl=timedelta(days=1))
+    @st.cache_data(ttl=timedelta(hours=3))
     def collect_data(link):
         return (pd.DataFrame((requests.get(link).json())))
 
@@ -90,12 +90,12 @@ if authentication_status:
         return dataframe
     # Define a function
 
-    @st.cache_data()
+    @st.cache_data(ttl=timedelta(hours=3))
     def read_excel_cache(name):
         df = pd.read_excel(name)
         return df
 
-    @st.cache_data()
+    @st.cache_data(ttl=timedelta(hours=3))
     def bar(df, yvalue, xvalue, text, title, y_title, x_title, color=None, discrete_sequence=None, map=None):
         fig = px.bar(df, y=yvalue,
                      x=xvalue, text=text, color=color, color_discrete_sequence=discrete_sequence, color_discrete_map=map)
@@ -107,7 +107,7 @@ if authentication_status:
         fig.update_traces(textposition='auto')
         return fig
 
-    @st.cache_data()
+    @st.cache_data(ttl=timedelta(hours=3))
     def chuyencan_converter(df):
         # Mapping diemdanh_details.chuyencan
         conditions = df.chuyencan == 1, df.chuyencan == 4, df.chuyencan == 7, df.chuyencan == 0
@@ -116,36 +116,37 @@ if authentication_status:
         return df
 
     # Read Excel
-    df = read_excel_cache('sol_score_update.xlsx')
+    # df = read_excel_cache('sol_score_update.xlsx')
+    df = read_excel_cache('hv_doanhnghiep.xlsx')
+    df = rename_lop(df, 'hv_coso_x')
     # Create a form to filter fullname
     with st.sidebar.form(key='coso_filter_form'):
         name_filter = st.selectbox(label="Select fullname:",
-                                   options=list(df['Họ tên'].unique()))
+                                   options=list(df['hv_fullname_x'].unique()))
         submit_button = st.form_submit_button(
             label='Filter',  use_container_width=True)
-    df1 = df[df['Họ tên'].isin([name_filter])]
+    df1 = df[df['hv_fullname_x'].isin([name_filter])]
     # First row
     col1, col2, col3 = st.columns([1, 1, 2])
-    col1.subheader(f"{df1.iloc[0, 2]}")
-    col2.subheader(f"{df1.iloc[0, 9]}")
-    col3.subheader(f"{df1.iloc[0, 10]}")
+    col1.subheader(f"{df1.iloc[0, 8]}")
+    col2.subheader(f"")
+    col3.subheader(f"")
 
     # SEcond row
     col1, col2, col3, col4 = st.columns([1, 1, 1, 1])
-    col1.markdown(f"MSNV: {df1.iloc[0,1]}")
-    col2.markdown(f"Email: {df1.iloc[0, 11]}")
-    col3.markdown(f"Ngày bắt đầu học {df1.iloc[0, 16]}")
-    col4.markdown(f"Học tại: {df1.iloc[0, 12]}")
-    df1 = df1.drop(['STT'], axis=1)
-    # Third row
+    col1.markdown(f"Hv id: {df1.iloc[0,6]}")
+    col2.markdown(f"Email: {df1.iloc[0, 9]}")
+    col3.markdown(f"Ngày bắt đầu học {df1.iloc[0, 19]}")
+    col4.markdown(f"Học tại: {df1.iloc[0, 11]}")
+    # Third rowr
     col1, col2, col3, col4 = st.columns(4)
-    col1.markdown(f"Lớp đang học: {df1.iloc[0, 18]}")
-    col2.markdown(f"Lớp TKB: {df1.iloc[0, 20]}")
-    col3.markdown(f"Lớp ca học: {df1.iloc[0, 21]}")
-    col4.markdown(f"Lớp giáo viên: {df1.iloc[0, 22]}")
+    col1.markdown(f"Lớp đang học: {df1.iloc[0, 21]}")
+    # col2.markdown(f"Lớp TKB: {df1.iloc[0, 20]}")
+    col3.markdown(f"Lớp ca học: {df1.iloc[0, 23]}")
+    col4.markdown(f"Lớp giáo viên: {df1.iloc[0, 24]}")
 
-    df2 = pd.melt(df1[['Họ tên', 'Nghe', 'Đọc', 'Viết', 'Nói', 'Overall']],
-                  id_vars='Họ tên', var_name='Skills', value_name='Score')
+    df2 = pd.melt(df1[['hv_fullname_x', 'listening', 'reading', 'writing', 'speaking', 'dauvao_overall']],
+                  id_vars='hv_fullname_x', var_name='Skills', value_name='Score')
     fig1 = bar(df2, yvalue='Score',
                xvalue='Skills', text=df2["Score"], title='', x_title='Kỹ năng', y_title='Điểm',)
     fig1.update_traces(
@@ -153,8 +154,8 @@ if authentication_status:
     fig1.update_layout(font=dict(size=25))
     fig1.update_xaxes(tickfont=dict(size=17))
 
-    df3 = pd.melt(df1[['Họ tên', 'thực buổi đăng ký', 'đã học', 'nghỉ']],
-                  id_vars='Họ tên', var_name='chuyên cần', value_name='số lần')
+    df3 = pd.melt(df1[['hv_fullname_x', 'thực buổi đăng ký của pđk đang học', 'Đi học', 'Nghỉ học']],
+                  id_vars='hv_fullname_x', var_name='chuyên cần', value_name='số lần')
     fig2 = bar(df3, yvalue='số lần',
                xvalue='chuyên cần', text=df3["số lần"], title='', x_title='', y_title='Số buổi',)
     fig2.update_traces(
@@ -164,8 +165,8 @@ if authentication_status:
     fig2.update_xaxes(tickfont=dict(size=17))
 
     st.markdown("-------------------------------------------------------------------------------------------------------------------------------------------------------")
-    df4 = pd.melt(df1[['Họ tên', 'thực buổi đăng ký', 'không làm', 'làm thiếu']],
-                  id_vars='Họ tên', var_name='chuyên cần', value_name='số lần')
+    df4 = pd.melt(df1[['hv_fullname_x', 'thực buổi đăng ký của pđk đang học', 'Không làm bài tập', 'Làm thiếu bài tập']],
+                  id_vars='hv_fullname_x', var_name='chuyên cần', value_name='số lần')
     fig3 = bar(df4, yvalue='số lần',
                xvalue='chuyên cần', text=df4["số lần"], title='', x_title='', y_title='Số buổi',)
     fig3.update_traces(
@@ -199,8 +200,8 @@ if authentication_status:
     # df_diemthi.location = df_diemthi.location.map(
     #     {1: "Vietop", 2: 'IDP', 3: "BC"})
     # # Merge
-    # df_diemthi = df_diemthi.merge(df[['hv_id', 'Họ tên']], on='hv_id').query(
-    #     "`Họ tên` == @name_filter")
+    # df_diemthi = df_diemthi.merge(df[['hv_id', 'hv_fullname_x']], on='hv_id').query(
+    #     "`hv_fullname_x` == @name_filter")
 
     # st.dataframe(df_diemthi)
     import io
@@ -217,7 +218,8 @@ if authentication_status:
     #         mime="application/vnd.ms-excel"
     #     )
     # st.markdown("-------------------------------------------------------------------------------------------------------------------------------------------------------")
-    lophoc = collect_data('https://vietop.tech/api/get_data/lophoc')
+    lophoc = collect_data(
+        'https://vietop.tech/api/get_data/lophoc').query("company != 'vietop'")
     lophoc_schedules = collect_data(
         'https://vietop.tech/api/get_data/lophoc_schedules')
     users = collect_data('https://vietop.tech/api/get_data/users')
@@ -226,14 +228,14 @@ if authentication_status:
         'https://vietop.tech/api/get_data/diemdanh_details')
     # Lophoc
     df_lophoc = lophoc[['lop_id', 'lop_cn', 'lop_ten', 'lop_cahoc', 'lop_thoigianhoc']]\
-        .merge(lophoc_schedules[['lop_id', 'teacher_id']], on='lop_id')\
-        .merge(users[['fullname', 'id']], left_on='teacher_id', right_on='id')\
-        .drop_duplicates(subset=['teacher_id', 'lop_ten'])
+        .merge(lophoc_schedules[['lop_id', 'teacher_id']], on='lop_id', how='left')\
+        .merge(users[['fullname', 'id']], left_on='teacher_id', right_on='id', how='left')\
+        .drop_duplicates(subset=['teacher_id', 'lop_id'])
     df_lophoc1 = df_lophoc.merge(
         molop[['lop_id', 'hv_id', 'molop_active']], on='lop_id')
-    df = df_lophoc1.merge(df1[['hv_id', 'Họ tên', 'hv_coso']], on='hv_id')\
-        .drop(['teacher_id', 'id', 'hv_coso'], axis=1)
-    df = df.reindex(columns=['hv_id', 'Họ tên', 'lop_id', 'lop_ten', 'lop_cahoc',
+    df = df_lophoc1.merge(df1[['hv_id', 'hv_fullname_x', 'hv_coso_x']], on='hv_id')\
+        .drop(['teacher_id', 'id', 'hv_coso_x'], axis=1)
+    df = df.reindex(columns=['hv_id', 'hv_fullname_x', 'lop_id', 'lop_ten', 'lop_cahoc',
                     'lop_thoigianhoc', 'fullname', 'molop_active'])
     df['molop_active'] = ['Lớp đang học' if i ==
                           1 else 'Lớp kết thúc' for i in df['molop_active']]
@@ -257,10 +259,12 @@ if authentication_status:
     df4 = df4[df4['lop_id'].isin(lop_filter)]
     # st.markdown("-------------------------------------------------------------------------------------------------------------------------------------------------------")
     ""
-    diemdanh = collect_data('https://vietop.tech/api/get_data/diemdanh')
+    diemdanh = collect_data(
+        'https://vietop.tech/api/get_data/diemdanh').query('lop_id == @lop_filter')
     df_drop = df4.drop_duplicates(subset='lop_id')[['lop_id']]\
         .merge(diemdanh[['lop_id', 'kynang', 'noidung_note', 'date_created',
                          'cahoc', 'giaovien',]], on='lop_id')
+
     # df_drop = df_drop[df_drop['kynang'].isin([1, 2, 3, 4])]
     df_drop['kynang_1'] = df_drop['kynang'].map(
         {1: 'Writing', 2: 'Speaking', 3: 'Reading', 4: 'Listening', })
@@ -269,7 +273,6 @@ if authentication_status:
     df_drop['kynang_3'] = df_drop['kynang'].map(
         {1: 'Buổi học', 2: 'Buổi học', 3: 'Buổi học', 4: 'Buổi học', 5: 'Lần test', 7: 'Lần test', 6: 'Buổi học'})
 
-    @st.cache_data()
     def pie_chart(col):
         df_group = df_drop.groupby(col, as_index=False)[
             col].value_counts()
@@ -315,9 +318,11 @@ if authentication_status:
     st.dataframe(df)
 
     # st.markdown("-------------------------------------------------------------------------------------------------------------------------------------------------------")
+    df4 = df4.drop_duplicates(subset='date_created', keep='last')
     df5 = df4.copy()
     df4.columns = ['tên giáo viên', 'lớp id', 'ngày học', 'giờ học', 'chuyên cần', 'lớp tên', 'lớp ca học',
                    'lớp thời gian học',  'tình trạng lớp']
+
     ""
     st.subheader(f"Tổng giờ học theo tháng của :blue[{name_filter}]")
     df5['date_created'] = df5['date_created'].astype('datetime64[ns]')
