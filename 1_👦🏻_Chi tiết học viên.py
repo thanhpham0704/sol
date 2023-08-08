@@ -114,11 +114,196 @@ if authentication_status:
         choices = ["Đi học", "Không học", "Nghỉ học", "Thiếu data"]
         df.chuyencan = np.select(conditions, choices)
         return df
+    # Import data
+    lophoc = collect_data(
+        'https://vietop.tech/api/get_data/lophoc').query("company != 'vietop'")
+    orders = collect_data('https://vietop.tech/api/get_data/orders')
+    hocvien = collect_data(
+        'https://vietop.tech/api/get_data/hocvien').query("hv_source == 24")
+    molop = collect_data('https://vietop.tech/api/get_data/molop')
+    lophoc_schedules = collect_data(
+        'https://vietop.tech/api/get_data/lophoc_schedules')
+    users = collect_data('https://vietop.tech/api/get_data/users')
+    diemdanh_details = collect_data(
+        'https://vietop.tech/api/get_data/diemdanh_details')
+    history = collect_data('https://vietop.tech/api/get_data/history')
+    history_nghi = history.query("action =='email' and object =='danger'")
+    # ---------------------------------------------------------------------------------------------------------------------------------------------------------
+    # Học viên SOL
+    hocvien_sol = hocvien[['hv_id', 'hv_fullname', 'hv_email', 'hv_phone', 'hv_coso',
+                           'user_id', 'hv_gender',
+                           'hv_birthday', 'hv_dauvao', 'dauvao_overall',
+                           'hv_muctieu_vt', 'hv_source', 'hv_camket', 'diem_camket',
+                           'hv_ngayhoc', 'hv_status']]
+    molop_sol = molop.query("molop_active ==1")[
+        ['lop_id', 'hv_id', 'ketoan_id']]
+    df = hocvien_sol.merge(molop_sol, on='hv_id', how='inner')\
+        .merge(lophoc_schedules.drop_duplicates(subset='lop_id')[['lop_id', 'teacher_id', 'class_period']], on='lop_id', how='left')\
+        .merge(users[['id', 'fullname']], left_on='teacher_id', right_on='id', how='left')
+    df = df.merge(orders[['ketoan_id', 'remaining_time']],
+                  on='ketoan_id', how='left')
+    df_sol = df.copy()
+    # Làm bài tập
+    # Filter for diemdanh_details of B2B only
+    diemdanh_details_b2b = hocvien[['hv_id']]\
+        .merge(molop.query('molop_active == 1')[['hv_id', 'ketoan_id']], on='hv_id')\
+        .merge(diemdanh_details, on='ketoan_id')\
+        .merge(lophoc.query("company != 'vietop'")[['lop_id']], on='lop_id')
 
-    # Read Excel
-    # df = read_excel_cache('sol_score_update.xlsx')
-    df = read_excel_cache('hv_doanhnghiep.xlsx')
-    df = rename_lop(df, 'hv_coso_x')
+    diemdanh_details_b2b.drop("hv_id", axis=1, inplace=True)
+    conditions = diemdanh_details_b2b.baitap == 1, diemdanh_details_b2b.baitap == 2, diemdanh_details_b2b.baitap == 0, diemdanh_details_b2b.baitap == 3
+    choices = ["Làm đủ", "Không làm bài tập", "Không học", "Làm thiếu bài tập"]
+    diemdanh_details_b2b.baitap = np.select(conditions, choices)
+
+    chuyencan = diemdanh_details_b2b.query("chuyencan == 1 or chuyencan == 9")[diemdanh_details_b2b.date_created > '2023-01-01']\
+        .merge(orders[['ketoan_id', 'hv_id']], on='ketoan_id')\
+        .merge(hocvien[['hv_id', 'hv_coso', 'hv_fullname']], on='hv_id')\
+        .groupby(['hv_coso', 'hv_id', 'hv_fullname', 'baitap']).size().reset_index(name='baitap_count')\
+        # Partition by hv_id
+    chuyencan['total'] = chuyencan.groupby(
+        ["hv_id"]).baitap_count.transform(np.sum)
+    chuyencan['percent_homework'] = round(
+        chuyencan['baitap_count'] / chuyencan['total'], 1)
+    # chuyencan.drop(["ketoan_id", "hv_id"], axis = 1, inplace = True)
+    chuyencan = chuyencan.merge(history_nghi.groupby(["hv_id"]).size(
+    ).reset_index(name='email_nhac_nho'), on='hv_id', how='left')
+    chuyencan.email_nhac_nho.fillna(0, inplace=True)
+    # Danh sach ket thuc that
+    orders_ketthuc = orders[['hv_id', 'ketoan_active', 'date_end']]\
+        .query('ketoan_active == 5')
+    # .query('created_at > "2022-10-01"')
+    orders_conlai = orders[['hv_id']][orders.ketoan_active.isin([1])]
+    hv_conlai = hocvien[['hv_id']].merge(orders_conlai, on='hv_id')
+    orders_kt_that = orders_ketthuc[~orders_ketthuc['hv_id'].isin(
+        hv_conlai['hv_id'])]
+    orders_kt_that = orders_kt_that.merge(
+        hocvien[['hv_id', 'hv_coso', 'hv_fullname', 'hv_status']], on='hv_id')
+    orders_kt_that.drop("ketoan_active", axis=1, inplace=True)
+
+    chuyencan = chuyencan[~chuyencan.hv_id.isin(orders_kt_that.hv_id)]
+
+    chuyencan_pivot = chuyencan.pivot_table(
+        index=['hv_id', 'hv_coso', 'hv_fullname', 'email_nhac_nho', 'total'], columns='baitap', values='baitap_count', fill_value=0).reset_index()
+    chuyencan_pivot['Làm thiếu và không làm'] = chuyencan_pivot['Làm thiếu bài tập'] + \
+        chuyencan_pivot['Không làm bài tập']
+    chuyencan_pivot = chuyencan_pivot.merge(hocvien[['hv_id']], on='hv_id')
+    df_meta = df_sol.merge(chuyencan_pivot, on='hv_id', how='left')
+    # Tỉ lệ nghỉ
+    # Filter for diemdanh_details of B2B only
+    diemdanh_details_b2b = hocvien[['hv_id']]\
+        .merge(molop.query('molop_active == 1')[['hv_id', 'ketoan_id']], on='hv_id')\
+        .merge(diemdanh_details, on='ketoan_id')\
+        .merge(lophoc.query("company != 'vietop'")[['lop_id']], on='lop_id')
+
+    diemdanh_details_subset = diemdanh_details_b2b[diemdanh_details_b2b.chuyencan.isin([1, 4, 7, 0])]\
+        .groupby(["ketoan_id", "chuyencan"]).size().reset_index(name='count_chuyencan')
+    # Mapping
+    diemdanh_details_subset['chuyencan'] = diemdanh_details_subset['chuyencan']\
+        .replace({1: 'Đi học', 4: 'Không học', 7: 'Nghỉ học'})
+
+    # Tỉ lệ nghỉ 2
+    orders_ketthuc = orders[['ketoan_id', 'hv_id',
+                             'ketoan_active']].query('ketoan_active == 5')
+    orders_conlai = orders[['ketoan_id', 'hv_id']
+                           ][orders.ketoan_active.isin([0, 1, 4])]
+    hv_conlai = hocvien[['hv_id']].merge(orders_conlai, on='hv_id')
+    orders_kt_that = orders_ketthuc[~orders_ketthuc['hv_id'].isin(
+        hv_conlai['hv_id'])]
+    orders_kt_that.drop("ketoan_active", axis=1, inplace=True)
+    # Orders không có kết thúc thật
+    orders_subset = orders[['ketoan_id',
+                            'ketoan_sogio', 'hv_id', 'ketoan_active']]
+    orders_ko_ktthat = orders_subset[~orders_subset['ketoan_id'].isin(
+        orders_kt_that['ketoan_id'])]
+    # Tỉ lệ nghỉ
+    absent_rate = orders_ko_ktthat.merge(
+        diemdanh_details_subset, on='ketoan_id', how='inner')
+    # Pivot chuyencan
+    absent_rate = absent_rate.pivot_table(
+        index=['ketoan_id', 'ketoan_sogio', 'hv_id'], columns='chuyencan', values='count_chuyencan', fill_value=0).reset_index()
+
+    absent_rate['Tổng buổi khoá học'] = absent_rate['ketoan_sogio'] / 2
+    absent_rate.drop(["ketoan_sogio"], axis='columns', inplace=True)
+
+    # Email nhac nho
+    count_history_nghi = history_nghi.groupby(
+        "hv_id").size().reset_index(name='count_nhacnho')
+    absent_rate = absent_rate.merge(count_history_nghi, on='hv_id', how='left')
+    # Merge hocvien
+    absent_rate = absent_rate.merge(hocvien[['hv_id', 'hv_coso', 'hv_fullname', 'hv_camket', ]]
+                                    .query("hv_camket != 'Huỷ hợp đồng 1' and hv_camket != 'Huỷ hợp đồng 2'"), on='hv_id')
+    absent_rate.fillna(0, inplace=True)  # Fillna
+    absent_rate = absent_rate.groupby(["hv_id", "hv_fullname", "hv_coso", "hv_camket", "count_nhacnho",])['Đi học', 'Nghỉ học', 'Không học', 'Tổng buổi khoá học']\
+        .sum().reset_index()
+
+    # Add colum absent_rate
+    absent_rate["Tỉ lệ nghỉ"] = absent_rate['Nghỉ học'] / \
+        absent_rate['Tổng buổi khoá học']
+
+    absent_rate['Tỉ lệ nghỉ category'] = ["bé hơn 11%" if i < 0.11 else "từ 16% trở lên" if i >=
+                                          0.16 else "từ 11% đến 15%" for i in absent_rate["Tỉ lệ nghỉ"]]
+
+    # Mapping hv_camket
+    conditions = [absent_rate['hv_camket'] == 0, absent_rate['hv_camket'] == 1, absent_rate['hv_camket'] == 2,
+                  absent_rate['hv_camket'] == 3, absent_rate['hv_camket'] == 4]
+    choices = ["Không cam kết", "Cam kết tiêu chuẩn",
+               "Huỷ hợp đồng 1", "Huỷ hợp đồng 2", "Cam kết thi thật"]
+    absent_rate['hv_camket'] = np.select(conditions, choices)
+
+    df_final = df_meta.merge(absent_rate, on='hv_id', how='left')
+    # FINAL PRODUCT which produce result similar to the excel # df = read_excel_cache('hv_doanhnghiep.xlsx')
+    import json
+    df = df_final[['hv_id', 'user_id', 'hv_fullname_x', 'hv_email', 'hv_phone', 'hv_coso_x',
+                   'hv_gender', 'hv_birthday', 'hv_dauvao', 'dauvao_overall', 'hv_muctieu_vt',
+                   'hv_camket_x', 'diem_camket',
+                   'hv_ngayhoc', 'hv_status', 'lop_id', 'ketoan_id', 'class_period',
+                   'fullname', 'email_nhac_nho', 'Không làm bài tập',
+                   'Làm thiếu bài tập', 'Làm đủ', 'Làm thiếu và không làm', 'Đi học', 'Nghỉ học',
+                   'Không học', 'Tổng buổi khoá học', 'Tỉ lệ nghỉ', 'Tỉ lệ nghỉ category', 'hv_ngayhoc']]
+    # Calculate percent of absence based on remaining_time
+    df_merge = df[['hv_id', 'hv_fullname_x', 'ketoan_id']].merge(
+        orders.query("ketoan_active == 1")[['ketoan_id', 'remaining_time']])
+    # Sum of remaining_time
+    df_group = df_merge.groupby('hv_id', as_index=False)[
+        'remaining_time'].sum()
+    # Merge df and df_group
+    df_final = df.merge(df_group, on='hv_id')
+    # Calculate tổng thực buồi đăng ký
+    df_final['Tổng thực buồi đăng ký của pđk đang học'] = df_final['remaining_time'] / 2
+    # Calculate Tỷ lệ nghỉ
+    df_final['Tỷ lệ nghỉ theo thực buổi đăng ký của pđk đang học'] = df_final['Nghỉ học'] / \
+        df_final['Tổng thực buồi đăng ký của pđk đang học']
+    # Rename columns
+    df_final_rename = df_final.rename(columns={
+                                      'Tỉ lệ nghỉ': 'Tỷ lệ nghỉ theo tổng buồi khoá học', 'remaining_time': 'thực buổi đăng ký của pđk đang học'})
+
+    df_final_rename['Tỷ lệ nghỉ category thực buổi đk'] = ["bé hơn 11%" if i < 0.11 else "từ 16% trở lên" if i >=
+                                                           0.16 else "từ 11% đến 15%" for i in df_final_rename['Tỷ lệ nghỉ theo thực buổi đăng ký của pđk đang học']]
+    # Add the company source
+    df_final_rename = df_final_rename.merge(
+        lophoc[['lop_id', 'company']], on='lop_id', how='inner')
+    # Filter for B2B only
+    df_final_rename = df_final_rename.query(
+        "company != 'vietop'").reset_index()
+
+    lines = df_final_rename['hv_dauvao'].to_list()
+    # Parse each line as JSON and extract skill values
+    skills = ['listening', 'reading', 'writing', 'speaking', 'grammar']
+    data_list = []
+
+    for line in lines:
+        item = json.loads(line)
+        skill_values = [item.get(skill, '#') for skill in skills]
+        data_list.append(skill_values)
+
+    # Create a pandas DataFrame
+    df_score = pd.DataFrame(data_list, columns=skills)
+    # Concat score and df_final_rename
+    df_large = pd.concat([df_score, df_final_rename], axis=1)
+
+    # CONTINIUE
+
+    df = rename_lop(df_large, 'hv_coso_x')
     # Create a form to filter fullname
     with st.sidebar.form(key='coso_filter_form'):
         name_filter = st.selectbox(label="Select fullname:",
