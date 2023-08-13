@@ -403,14 +403,7 @@ if authentication_status:
     #         mime="application/vnd.ms-excel"
     #     )
     # st.markdown("-------------------------------------------------------------------------------------------------------------------------------------------------------")
-    lophoc = collect_data(
-        'https://vietop.tech/api/get_data/lophoc').query("company != 'vietop'")
-    lophoc_schedules = collect_data(
-        'https://vietop.tech/api/get_data/lophoc_schedules')
-    users = collect_data('https://vietop.tech/api/get_data/users')
-    molop = collect_data('https://vietop.tech/api/get_data/molop')
-    diemdanh_details = collect_data(
-        'https://vietop.tech/api/get_data/diemdanh_details')
+
     # Lophoc
     df_lophoc = lophoc[['lop_id', 'lop_cn', 'lop_ten', 'lop_cahoc', 'lop_thoigianhoc']]\
         .merge(lophoc_schedules[['lop_id', 'teacher_id']], on='lop_id', how='left')\
@@ -546,9 +539,7 @@ if authentication_status:
     # st.markdown("-------------------------------------------------------------------------------------------------------------------------------------------------------")
     # ignore SettingWithCopyWarning
     pd.options.mode.chained_assignment = None  # default='warn'
-    hocvien = collect_data('https://vietop.tech/api/get_data/hocvien')
     hocvien = hocvien.query('hv_fullname == @name_filter')
-    orders = collect_data('https://vietop.tech/api/get_data/orders')
     order_details = collect_data(
         'https://vietop.tech/api/get_data/order_details')
     khoahoc = collect_data('https://vietop.tech/api/get_data/khoahoc')
